@@ -1,11 +1,11 @@
 import 'package:billing_app/core/widgets/primary_button.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:pretty_qr_code/pretty_qr_code.dart';
+import 'package:provider/provider.dart';
 
-import '../../../shop/presentation/bloc/shop_bloc.dart';
-import '../bloc/billing_bloc.dart';
+import '../../../shop/presentation/provider/shop_provider.dart';
+import '../provider/billing_provider.dart';
 
 class CheckoutPage extends StatefulWidget {
   const CheckoutPage({super.key});
@@ -23,7 +23,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
         canPop: false,
         onPopInvokedWithResult: (bool didPop, dynamic result) {
           if (didPop) return;
-          context.read<BillingBloc>().add(ClearCartEvent());
+          context.read<BillingProvider>().clearCart();
           context.go('/');
         },
         child: Scaffold(
@@ -37,24 +37,17 @@ class _CheckoutPageState extends State<CheckoutPage> {
               icon: Icon(Icons.chevron_left,
                   size: 28, color: Theme.of(context).primaryColor),
               onPressed: () {
-                context.read<BillingBloc>().add(ClearCartEvent());
+                context.read<BillingProvider>().clearCart();
                 context.go('/');
               },
             ),
           ),
-          body: BlocConsumer<BillingBloc, BillingState>(
-            listener: (context, state) {
-              if (state.printSuccess) {
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                    content: Text('Printed successfully'),
-                    backgroundColor: Colors.green));
-                // context.read<BillingBloc>().add(ClearCartEvent());
-                // context.go('/');
-              }
-            },
-            builder: (context, billingState) {
-              return BlocBuilder<ShopBloc, ShopState>(
-                  builder: (context, shopState) {
+          body: Consumer<BillingProvider>(
+            builder: (context, provider, child) {
+              final billingState = provider.state;
+              return Consumer<ShopProvider>(
+                  builder: (context, provider, child) {
+                final shopState = provider.state;
                 String upiId = '';
                 String shopName = 'Shop';
 
@@ -223,15 +216,40 @@ class _CheckoutPageState extends State<CheckoutPage> {
                             ),
                           ),
                           PrimaryButton(
-                            onPressed: () {
+                            onPressed: () async {
                               if (shopState is ShopLoaded) {
-                                context.read<BillingBloc>().add(
-                                    PrintReceiptEvent(
+                                await context
+                                    .read<BillingProvider>()
+                                    .printReceipt(
                                         shopName: shopState.shop.name,
                                         address1: shopState.shop.addressLine1,
                                         address2: shopState.shop.addressLine2,
                                         phone: shopState.shop.phoneNumber,
-                                        footer: shopState.shop.footerText));
+                                        footer: shopState.shop.footerText);
+
+                                if (mounted &&
+                                    context
+                                        .read<BillingProvider>()
+                                        .state
+                                        .printSuccess) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                          content: Text('Printed successfully'),
+                                          backgroundColor: Colors.green));
+                                } else if (mounted &&
+                                    context
+                                            .read<BillingProvider>()
+                                            .state
+                                            .error !=
+                                        null) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                          content: Text(context
+                                              .read<BillingProvider>()
+                                              .state
+                                              .error!),
+                                          backgroundColor: Colors.red));
+                                }
                               } else {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                     const SnackBar(

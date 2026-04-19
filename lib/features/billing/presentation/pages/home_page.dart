@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import 'package:vibration/vibration.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
-import '../../../billing/presentation/bloc/billing_bloc.dart';
+import '../../../billing/presentation/provider/billing_provider.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/primary_button.dart';
 import '../../domain/entities/cart_item.dart';
@@ -59,7 +59,17 @@ class _HomePageState extends State<HomePage> {
         }
 
         if (mounted) {
-          context.read<BillingBloc>().add(ScanBarcodeEvent(rawValue));
+          await context.read<BillingProvider>().scanBarcode(rawValue);
+          final error = context.read<BillingProvider>().state.error;
+          if (mounted && error != null) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(error),
+                backgroundColor: Colors.red,
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+          }
         }
         break; // Process one barcode at a time per frame
       }
@@ -69,21 +79,7 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: BlocListener<BillingBloc, BillingState>(
-        listenWhen: (previous, current) =>
-            previous.error != current.error && current.error != null,
-        listener: (context, state) {
-          if (state.error != null) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.error!),
-                backgroundColor: Colors.red,
-                behavior: SnackBarBehavior.floating,
-              ),
-            );
-          }
-        },
-        child: Stack(
+      body: Stack(
           children: [
             // SCANNER VIEW (TOP 50%)
             Positioned(
@@ -104,9 +100,9 @@ class _HomePageState extends State<HomePage> {
             ),
           ],
         ),
-      ),
       bottomSheet:
-          BlocBuilder<BillingBloc, BillingState>(builder: (context, state) {
+          Consumer<BillingProvider>(builder: (context, provider, child) {
+            final state = provider.state;
         return PrimaryButton(
           onPressed: state.cartItems.isEmpty
               ? null
@@ -329,8 +325,9 @@ class _HomePageState extends State<HomePage> {
           ),
 
           // Header
-          BlocBuilder<BillingBloc, BillingState>(
-            builder: (context, state) {
+          Consumer<BillingProvider>(
+            builder: (context, provider, child) {
+              final state = provider.state;
               final totalItems =
                   state.cartItems.fold<int>(0, (sum, i) => sum + i.quantity);
               return Padding(
@@ -378,8 +375,9 @@ class _HomePageState extends State<HomePage> {
           // List View
           Expanded(
             child: Stack(children: [
-              BlocBuilder<BillingBloc, BillingState>(
-                builder: (context, state) {
+              Consumer<BillingProvider>(
+                builder: (context, provider, child) {
+                  final state = provider.state;
                   if (state.cartItems.isEmpty) {
                     return _buildEmptyCart();
                   }
@@ -490,12 +488,12 @@ class _HomePageState extends State<HomePage> {
                     icon: Icons.remove,
                     onPressed: () {
                       if (item.quantity > 1) {
-                        context.read<BillingBloc>().add(UpdateQuantityEvent(
-                            item.product.id, item.quantity - 1));
+                        context.read<BillingProvider>().updateQuantity(
+                            item.product.id, item.quantity - 1);
                       } else {
                         context
-                            .read<BillingBloc>()
-                            .add(RemoveProductFromCartEvent(item.product.id));
+                            .read<BillingProvider>()
+                            .removeProductFromCart(item.product.id);
                       }
                     }),
                 SizedBox(
@@ -509,8 +507,8 @@ class _HomePageState extends State<HomePage> {
                 _circularIconButton(
                     icon: Icons.add,
                     onPressed: () {
-                      context.read<BillingBloc>().add(UpdateQuantityEvent(
-                          item.product.id, item.quantity + 1));
+                      context.read<BillingProvider>().updateQuantity(
+                          item.product.id, item.quantity + 1);
                     }),
               ],
             ),

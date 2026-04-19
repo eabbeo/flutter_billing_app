@@ -1,11 +1,11 @@
 import 'package:billing_app/core/widgets/input_label.dart';
 import 'package:billing_app/core/widgets/primary_button.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import 'package:uuid/uuid.dart';
 
-import '../bloc/product_bloc.dart';
+import '../provider/product_provider.dart';
 import '../../domain/entities/product.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/app_validators.dart';
@@ -32,11 +32,11 @@ class _AddProductPageState extends State<AddProductPage> {
     }
   }
 
-  void _submit() {
+  void _submit() async {
     if (_formKey.currentState!.validate()) {
       _formKey.currentState!.save();
 
-      final productState = context.read<ProductBloc>().state;
+      final productState = context.read<ProductProvider>().state;
       final existingProduct =
           productState.products.where((p) => p.barcode == _barcode).firstOrNull;
 
@@ -57,8 +57,16 @@ class _AddProductPageState extends State<AddProductPage> {
         price: _price,
       );
 
-      context.read<ProductBloc>().add(AddProduct(product));
-      context.pop();
+      final success = await context.read<ProductProvider>().addProduct(product);
+      if (mounted && success) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Product added successfully'), backgroundColor: Colors.green));
+        context.pop();
+      } else if (mounted) {
+        final message = context.read<ProductProvider>().state.message;
+        if (message != null) {
+           ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message), backgroundColor: Colors.red));
+        }
+      }
     }
   }
 

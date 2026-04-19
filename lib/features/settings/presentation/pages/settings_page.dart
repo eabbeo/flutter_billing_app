@@ -1,13 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import 'package:app_settings/app_settings.dart';
 
 import '../../../../core/theme/app_theme.dart';
-import '../../../shop/presentation/bloc/shop_bloc.dart';
-import '../bloc/printer_bloc.dart';
-import '../bloc/printer_event.dart';
-import '../bloc/printer_state.dart';
+import '../../../shop/presentation/provider/shop_provider.dart';
+import '../provider/printer_provider.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -21,7 +19,9 @@ class _SettingsPageState extends State<SettingsPage> {
   void initState() {
     super.initState();
     // Re-initialize printer state whenever settings page opens
-    context.read<PrinterBloc>().add(InitPrinterEvent());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) context.read<PrinterProvider>().init();
+    });
   }
 
   @override
@@ -47,8 +47,9 @@ class _SettingsPageState extends State<SettingsPage> {
               width: double.infinity,
               color: Colors.white,
               padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 24),
-              child: BlocBuilder<ShopBloc, ShopState>(
-                builder: (context, state) {
+              child: Consumer<ShopProvider>(
+                builder: (context, provider, child) {
+                  final state = provider.state;
                   String shopName = 'Elite Groceries';
                   String initials = 'EG';
                   if (state is ShopLoaded && state.shop.name.isNotEmpty) {
@@ -121,19 +122,9 @@ class _SettingsPageState extends State<SettingsPage> {
 
             // Hardware Section
             _buildSectionHeader('Hardware'),
-            BlocConsumer<PrinterBloc, PrinterState>(
-              listener: (context, state) {
-                if (state.errorMessage != null) {
-                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                      content: Text(state.errorMessage!),
-                      backgroundColor: Colors.red));
-                } else if (state.status == PrinterStatus.connected) {
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                      content: Text('Connected to printer'),
-                      backgroundColor: Colors.green));
-                }
-              },
-              builder: (context, state) {
+            Consumer<PrinterProvider>(
+              builder: (context, provider, child) {
+                final state = provider.state;
                 return _buildListGroup(
                   children: [
                     _buildListItem(
@@ -181,9 +172,17 @@ class _SettingsPageState extends State<SettingsPage> {
                           else
                             IconButton(
                               icon: const Icon(Icons.refresh),
-                              onPressed: () => context
-                                  .read<PrinterBloc>()
-                                  .add(RefreshPrinterEvent()),
+                              onPressed: () async {
+                                final p = context.read<PrinterProvider>();
+                                await p.refresh();
+                                if (mounted) {
+                                  if (p.state.errorMessage != null) {
+                                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(p.state.errorMessage!), backgroundColor: Colors.red));
+                                  } else if (p.state.status == PrinterStatus.connected) {
+                                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Connected to printer'), backgroundColor: Colors.green));
+                                  }
+                                }
+                              },
                               color: AppTheme.primaryColor,
                             ),
                           IconButton(

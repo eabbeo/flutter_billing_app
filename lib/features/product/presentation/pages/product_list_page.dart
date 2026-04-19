@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
-import '../bloc/product_bloc.dart';
+import '../provider/product_provider.dart';
 import '../../domain/entities/product.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/app_validators.dart';
@@ -69,8 +69,9 @@ class _ProductListPageState extends State<ProductListPage> {
           // Search Bar
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: BlocBuilder<ProductBloc, ProductState>(
-                builder: (context, state) {
+            child: Consumer<ProductProvider>(
+                builder: (context, provider, child) {
+                  final state = provider.state;
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -115,25 +116,9 @@ class _ProductListPageState extends State<ProductListPage> {
           ),
 
           Expanded(
-            child: BlocConsumer<ProductBloc, ProductState>(
-              listener: (context, state) {
-                if (state.status == ProductStatus.success &&
-                    state.message != null) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                        content: Text(state.message!),
-                        backgroundColor: Colors.green),
-                  );
-                } else if (state.status == ProductStatus.error &&
-                    state.message != null) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                        content: Text(state.message!),
-                        backgroundColor: Colors.red),
-                  );
-                }
-              },
-              builder: (context, state) {
+            child: Consumer<ProductProvider>(
+              builder: (context, provider, child) {
+                final state = provider.state;
                 if (state.status == ProductStatus.loading &&
                     state.products.isEmpty) {
                   return const Center(child: CircularProgressIndicator());
@@ -272,9 +257,16 @@ class _ProductListPageState extends State<ProductListPage> {
               child: const Text('Cancel'),
             ),
             TextButton(
-              onPressed: () {
-                context.read<ProductBloc>().add(DeleteProduct(product.id));
-                Navigator.pop(innerContext);
+              onPressed: () async {
+                final nav = Navigator.of(innerContext);
+                final scaffold = ScaffoldMessenger.of(context);
+                final success = await context.read<ProductProvider>().deleteProduct(product.id);
+                nav.pop();
+                if (success) {
+                  scaffold.showSnackBar(const SnackBar(content: Text('Product deleted successfully'), backgroundColor: Colors.green));
+                } else {
+                  scaffold.showSnackBar(const SnackBar(content: Text('Failed to delete product'), backgroundColor: Colors.red));
+                }
               },
               child: const Text('Delete', style: TextStyle(color: Colors.red)),
             ),

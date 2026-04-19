@@ -1,10 +1,10 @@
 import 'package:billing_app/core/widgets/input_label.dart';
 import 'package:billing_app/core/widgets/primary_button.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import '../../domain/entities/shop.dart';
-import '../bloc/shop_bloc.dart';
+import '../provider/shop_provider.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/app_validators.dart';
 
@@ -35,7 +35,9 @@ class _ShopDetailsPageState extends State<ShopDetailsPage> {
     _footerController = TextEditingController();
 
     // Load shop data
-    context.read<ShopBloc>().add(LoadShopEvent());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) context.read<ShopProvider>().loadShop();
+    });
   }
 
   void _updateControllers(Shop shop) {
@@ -60,7 +62,7 @@ class _ShopDetailsPageState extends State<ShopDetailsPage> {
     super.dispose();
   }
 
-  void _saveShop() {
+  void _saveShop() async {
     if (_formKey.currentState!.validate()) {
       final shop = Shop(
         name: _nameController.text,
@@ -71,7 +73,16 @@ class _ShopDetailsPageState extends State<ShopDetailsPage> {
         footerText: _footerController.text,
       );
 
-      context.read<ShopBloc>().add(UpdateShopEvent(shop));
+      final success = await context.read<ShopProvider>().updateShop(shop);
+      if (mounted && success) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Shop details saved!'), backgroundColor: Colors.green));
+          context.pop();
+      } else if (mounted) {
+          final state = context.read<ShopProvider>().state;
+          if (state is ShopError) {
+             ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(state.message), backgroundColor: Colors.red));
+          }
+      }
     }
   }
 
@@ -81,25 +92,17 @@ class _ShopDetailsPageState extends State<ShopDetailsPage> {
         appBar: AppBar(
           title: const Text('Shop Details'),
         ),
-        body: BlocConsumer<ShopBloc, ShopState>(
-          listener: (context, state) {
-            if (state is ShopLoaded) {
-              _updateControllers(state.shop);
-            } else if (state is ShopOperationSuccess) {
-              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                  content: Text('Shop details saved!'),
-                  backgroundColor: Colors.green));
-              context.pop();
-            } else if (state is ShopError) {
-              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                  content: Text(state.message), backgroundColor: Colors.red));
-            }
-          },
-          buildWhen: (previous, current) =>
-              current is ShopLoading || current is ShopLoaded,
-          builder: (context, state) {
+        body: Consumer<ShopProvider>(
+          builder: (context, provider, child) {
+            final state = provider.state;
             if (state is ShopLoading) {
               return const Center(child: CircularProgressIndicator());
+            }
+
+            if (state is ShopLoaded) {
+               WidgetsBinding.instance.addPostFrameCallback((_) {
+                 if (mounted) _updateControllers(state.shop);
+               });
             }
 
             return SingleChildScrollView(

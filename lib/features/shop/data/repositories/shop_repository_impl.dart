@@ -18,12 +18,12 @@ class ShopRepositoryImpl implements ShopRepository {
       } else {
         // Return default shop if not found
         return const Right(Shop(
-            name: 'Dinesh Shop',
-            addressLine1: 'Samrajpet, Mecheri',
-            addressLine2: 'Salem - 636453',
-            phoneNumber: '+917010674588',
-            upiId: 'dineshsowndar@oksbi',
-            footerText: 'Thank you, Visit again!!!'));
+            name: 'Waawolo Technologies',
+            addressLine1: 'info@waawolotechnologies',
+            addressLine2: '+233248013607',
+            phoneNumber: '+233248013607',
+            upiId: '', //'dineshsowndar@oksbi',
+            footerText: 'Leading with footprints'));
       }
     } catch (e) {
       return Left(CacheFailure(e.toString()));
