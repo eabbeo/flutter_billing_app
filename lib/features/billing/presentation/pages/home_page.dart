@@ -80,29 +80,29 @@ class _HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: Stack(
-          children: [
-            // SCANNER VIEW (TOP 50%)
-            Positioned(
-              top: 0,
-              left: 0,
-              right: 0,
-              height: MediaQuery.of(context).size.height * 0.4,
-              child: _buildScannerSection(),
-            ),
+        children: [
+          // SCANNER VIEW (TOP 50%)
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            height: MediaQuery.of(context).size.height * 0.4,
+            child: _buildScannerSection(),
+          ),
 
-            // BOTTOM PANEL (BOTTOM 50% + OVERLAP)
-            Positioned(
-              top: (MediaQuery.of(context).size.height * 0.4) - 24, // overlap
-              left: 0,
-              right: 0,
-              bottom: 0,
-              child: _buildBottomPanel(),
-            ),
-          ],
-        ),
+          // BOTTOM PANEL (BOTTOM 50% + OVERLAP)
+          Positioned(
+            top: (MediaQuery.of(context).size.height * 0.4) - 24, // overlap
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: _buildBottomPanel(),
+          ),
+        ],
+      ),
       bottomSheet:
           Consumer<BillingProvider>(builder: (context, provider, child) {
-            final state = provider.state;
+        final state = provider.state;
         return PrimaryButton(
           onPressed: state.cartItems.isEmpty
               ? null
@@ -357,7 +357,7 @@ class _HomePageState extends State<HomePage> {
                                 color: Colors.grey,
                                 letterSpacing: 1.2)),
                         Text(
-                          '₹${state.totalAmount.toStringAsFixed(2)}',
+                          'GHS ${state.totalAmount.toStringAsFixed(2)}',
                           style: TextStyle(
                               fontSize: 20,
                               fontWeight: FontWeight.w900,
@@ -488,8 +488,9 @@ class _HomePageState extends State<HomePage> {
                     icon: Icons.remove,
                     onPressed: () {
                       if (item.quantity > 1) {
-                        context.read<BillingProvider>().updateQuantity(
-                            item.product.id, item.quantity - 1);
+                        context
+                            .read<BillingProvider>()
+                            .updateQuantity(item.product.id, item.quantity - 1);
                       } else {
                         context
                             .read<BillingProvider>()
@@ -507,8 +508,9 @@ class _HomePageState extends State<HomePage> {
                 _circularIconButton(
                     icon: Icons.add,
                     onPressed: () {
-                      context.read<BillingProvider>().updateQuantity(
-                          item.product.id, item.quantity + 1);
+                      context
+                          .read<BillingProvider>()
+                          .updateQuantity(item.product.id, item.quantity + 1);
                     }),
               ],
             ),

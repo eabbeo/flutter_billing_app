@@ -1,6 +1,6 @@
 {
-    "name": "billing_app",
-    "short_name": "billing_app",
+    "name": "meshop_app",
+    "short_name": "meshop_app",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

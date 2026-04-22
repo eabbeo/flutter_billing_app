@@ -76,7 +76,7 @@ lib/
 1. Clone the repository and navigate to the project directory:
    ```bash
    git clone <repository_url>
-   cd billing_app
+   cd meshop_app
    ```
 
 2. Fetch dependencies:
